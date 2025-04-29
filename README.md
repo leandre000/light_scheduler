@@ -38,6 +38,9 @@ Open frontend.html in your browser and schedule your ON/OFF times.
 
 🔌 With Real Arduino Hardware
 Edit Serial Port in light-scheduler.py:
+C:\Users\Shema Leandre\Pictures\Screenshots\Screenshot 2025-04-29 073545.png
+
+
 
 🔄 How It Works
 
