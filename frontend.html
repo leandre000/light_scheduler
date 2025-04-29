@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Light Scheduler</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Poppins', sans-serif;
+      background: #282c34;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .container {
+      background: #1e2127;
+      padding: 40px 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+      text-align: center;
+      width: 320px;
+      color: #fff;
+    }
+
+    .container h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+
+    .bulb-container {
+      margin-bottom: 30px;
+    }
+
+    .bulb {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 20px;
+      transition: filter 0.3s;
+    }
+
+    .time-picker {
+      margin-bottom: 25px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #bbb;
+      text-align: left;
+    }
+
+    input[type="time"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #444;
+      border-radius: 10px;
+      background-color: #2c2f36;
+      color: #fff;
+      font-size: 16px;
+      outline: none;
+      margin-bottom: 15px;
+      transition: border-color 0.3s;
+    }
+
+    input[type="time"]:focus {
+      border-color: #4facfe;
+    }
+
+    .btn {
+      width: 100%;
+      background: #4facfe;
+      border: none;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 16px;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s;
+      margin-top: 8px;
+    }
+
+    .btn:hover {
+      background: #3c8dde;
+    }
+
+    .status {
+      margin-top: 30px;
+      font-size: 14px;
+      color: #bbb;
+    }
+
+    .status .circle {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: red;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .circle.online {
+      background: green;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #4facfe;
+      padding: 14px 20px;
+      border-radius: 10px;
+      color: #fff;
+      font-weight: 500;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Light Scheduler</h1>
+
+  <div class="bulb-container">
+    <img id="bulb" src="https://img.icons8.com/ios/100/ffffff/light-off--v1.png" alt="Bulb" class="bulb">
+  </div>
+
+  <div class="time-picker">
+    <label for="onTime">Set ON Time</label>
+    <input type="time" id="onTime">
+    <button class="btn" onclick="sendOnTime()">Set ON</button>
+  </div>
+
+  <div class="time-picker">
+    <label for="offTime">Set OFF Time</label>
+    <input type="time" id="offTime">
+    <button class="btn" onclick="sendOffTime()">Set OFF</button>
+  </div>
+
+  <div class="status">
+    <span class="circle" id="statusCircle"></span>
+    <span id="statusText">Connecting...</span>
+  </div>
+</div>
+
+<div class="toast" id="toast">Schedule sent!</div>
+
+<script>
+  let socket = new WebSocket('ws://localhost:8765');
+  const statusText = document.getElementById('statusText');
+  const statusCircle = document.getElementById('statusCircle');
+  const toast = document.getElementById('toast');
+  const bulb = document.getElementById('bulb');
+
+  socket.onopen = () => {
+    console.log('Connected');
+    statusText.textContent = 'Online';
+    statusCircle.classList.add('online');
+  };
+
+  socket.onclose = () => {
+    console.log('Disconnected');
+    statusText.textContent = 'Offline';
+    statusCircle.classList.remove('online');
+  };
+
+  socket.onerror = () => {
+    console.log('Error');
+    statusText.textContent = 'Error';
+    statusCircle.classList.remove('online');
+  };
+
+  socket.onmessage = (event) => {
+    const message = event.data;
+    console.log('Message from server:', message);
+
+    if (message.includes("TURN_ON")) {
+      bulb.src = "https://img.icons8.com/ios/100/ffffff/light-on--v1.png"; // Bright bulb
+    } else if (message.includes("TURN_OFF")) {
+      bulb.src = "https://img.icons8.com/ios/100/ffffff/light-off--v1.png"; // Dark bulb
+    }
+  };
+
+  function sendOnTime() {
+    const onTime = document.getElementById('onTime').value;
+    if (socket.readyState === WebSocket.OPEN && onTime) {
+      socket.send(`${onTime} ON`);
+      showToast("ON time scheduled!");
+    } else {
+      alert('WebSocket not connected.');
+    }
+  }
+
+  function sendOffTime() {
+    const offTime = document.getElementById('offTime').value;
+    if (socket.readyState === WebSocket.OPEN && offTime) {
+      socket.send(`${offTime} OFF`);
+      showToast("OFF time scheduled!");
+    } else {
+      alert('WebSocket not connected.');
+    }
+  }
+
+  function showToast(message) {
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 3000);
+  }
+</script>
+
+</body>
+</html>
